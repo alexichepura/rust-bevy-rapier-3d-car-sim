@@ -11,14 +11,21 @@ use bevy_garage_renet::{
 };
 use bevy_renet::{
     renet::{
-        transport::{ClientAuthentication, NetcodeClientTransport, NetcodeTransportError},
+        transport::{
+            ClientAuthentication, ConnectToken, NetcodeClientTransport, NetcodeTransportError,
+            NETCODE_USER_DATA_BYTES,
+        },
         RenetClient,
     },
     transport::NetcodeClientPlugin,
     RenetClientPlugin,
 };
 use renet_visualizer::{RenetClientVisualizer, RenetVisualizerStyle};
-use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
+use std::{
+    collections::HashMap,
+    net::UdpSocket,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Component)]
 struct ControlledPlayer;
@@ -50,17 +57,35 @@ fn new_renet_client() -> (RenetClient, NetcodeClientTransport) {
     };
 
     let server_addr = addr.parse().unwrap();
-    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    // let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+    socket.set_nonblocking(true).unwrap();
     let current_time = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let client_id = current_time.as_millis() as u64;
-    let authentication = ClientAuthentication::Unsecure {
+
+    let username = Username("Test1".to_string());
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let private_key = b"an example very very secret key."; // 32-bytes
+    let connect_token = ConnectToken::generate(
+        now,
+        PROTOCOL_ID,
+        300,
         client_id,
-        protocol_id: PROTOCOL_ID,
-        server_addr,
-        user_data: None,
-    };
+        15,
+        vec![server_addr],
+        Some(&username.to_netcode_user_data()),
+        private_key,
+    )
+    .unwrap();
+    let authentication = ClientAuthentication::Secure { connect_token };
+    // let authentication = ClientAuthentication::Unsecure {
+    //     client_id,
+    //     protocol_id: PROTOCOL_ID,
+    //     server_addr,
+    //     user_data: None,
+    // };
 
     let transport = NetcodeClientTransport::new(current_time, authentication, socket).unwrap();
 
@@ -245,5 +270,31 @@ fn client_sync_players(
                 }
             }
         }
+    }
+}
+
+// Helper struct to pass an username in user data inside the ConnectToken
+struct Username(String);
+
+impl Username {
+    fn to_netcode_user_data(&self) -> [u8; NETCODE_USER_DATA_BYTES] {
+        let mut user_data = [0u8; NETCODE_USER_DATA_BYTES];
+        if self.0.len() > NETCODE_USER_DATA_BYTES - 8 {
+            panic!("Username is too big");
+        }
+        user_data[0..8].copy_from_slice(&(self.0.len() as u64).to_le_bytes());
+        user_data[8..self.0.len() + 8].copy_from_slice(self.0.as_bytes());
+
+        user_data
+    }
+
+    fn from_user_data(user_data: &[u8; NETCODE_USER_DATA_BYTES]) -> Self {
+        let mut buffer = [0u8; 8];
+        buffer.copy_from_slice(&user_data[0..8]);
+        let mut len = u64::from_le_bytes(buffer) as usize;
+        len = len.min(NETCODE_USER_DATA_BYTES - 8);
+        let data = user_data[8..len + 8].to_vec();
+        let username = String::from_utf8(data).unwrap();
+        Self(username)
     }
 }
