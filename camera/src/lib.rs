@@ -32,7 +32,9 @@ impl Plugin for CarCameraPlugin {
             .add_systems(Update, (grab_mouse, camera_switch_system))
             .add_systems(
                 PostUpdate,
-                camera_controller_system.after(PhysicsSet::StepSimulation),
+                camera_controller_system
+                    .after(PhysicsSet::Writeback)
+                    .before(TransformSystem::TransformPropagate),
             );
     }
 }

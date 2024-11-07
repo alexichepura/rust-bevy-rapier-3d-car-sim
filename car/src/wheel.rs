@@ -41,7 +41,7 @@ pub fn spawn_wheel(
     spec: &WheelSpec,
     mount: &WheelMount,
     car_transform: Transform,
-    joint: ImpulseJoint,
+    joint: MultibodyJoint,
 ) -> Entity {
     let wheel = Wheel::new(spec, mount.front, mount.left);
     let diameter = wheel.radius * 2.;
@@ -89,9 +89,7 @@ pub fn spawn_wheel(
                 ..default()
             },
             // Restitution::coefficient(0.7),
-            Restitution::coefficient(0.),
-        ),
-        (
+            Restitution::coefficient(0.1),
             Ccd::enabled(),
             ColliderScale::Absolute(Vec3::ONE),
             ExternalForce::default(),

@@ -32,7 +32,7 @@ pub fn esp_system(
         &mut ExternalForce,
         &Transform,
         &Velocity,
-        &mut ImpulseJoint,
+        &mut MultibodyJoint,
     )>,
     #[cfg(feature = "graphics")] car_res: Res<crate::CarRes>,
     #[cfg(feature = "graphics")] mut gizmos: Gizmos,
@@ -94,6 +94,7 @@ pub fn esp_system(
         let torque_vec = Vec3::new(0., torque, 0.);
         let steering_torque_vec = quat.mul_vec3(torque_vec);
 
+        // dbg!(car_wheels.entities);
         for wheel_entity in car_wheels.entities.iter() {
             let (wheel, mut f, transform, v, mut j) = wheels_query.get_mut(*wheel_entity).unwrap();
             let radius_vel = v.angvel * wheel.radius;

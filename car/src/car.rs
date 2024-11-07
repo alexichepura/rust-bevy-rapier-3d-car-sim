@@ -1,4 +1,7 @@
-use crate::{joint::build_joint, spawn_wheel, CarSpec, WheelSpec};
+use crate::{
+    joint::{build_suspension_joint, build_wheel_joint},
+    spawn_suspension, spawn_wheel, CarSpec, WheelSpec,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
@@ -67,7 +70,7 @@ pub fn spawn_car(
     #[cfg(feature = "graphics")] car_scene: &Handle<Scene>,
     #[cfg(feature = "graphics")] wheel_scene: &Handle<Scene>,
     player: bool,
-    transform: Transform,
+    car_transform: Transform,
 ) -> Entity {
     let spec = CarSpec::default();
     let wheel_spec = WheelSpec::new(spec.wheel_radius, spec.wheel_width);
@@ -76,22 +79,40 @@ pub fn spawn_car(
         cmd,
         #[cfg(feature = "graphics")]
         car_scene,
-        Car::new(transform),
+        Car::new(car_transform),
         spec,
     );
+    // let suspensions = CarWheels::new(mounts.map(|mount| {
+    //     let joint_suspension = ImpulseJoint::new(car_id, build_suspension_joint(mount.anchor));
+    //     let suspension_id = spawn_suspension(cmd, mount.anchor, car_transform, joint_suspension);
+    //     let joint_wheel = ImpulseJoint::new(suspension_id, build_wheel_joint(mount.left));
+    //     let wheel_id = spawn_wheel(
+    //         cmd,
+    //         #[cfg(feature = "graphics")]
+    //         wheel_scene,
+    //         &wheel_spec,
+    //         &mount,
+    //         car_transform,
+    //         joint_wheel,
+    //     );
+    //     suspension_id
+    // }));
     let wheels = CarWheels::new(mounts.map(|mount| {
-        let joint = ImpulseJoint::new(car_id, build_joint(mount.anchor, mount.left));
+        let joint_suspension = MultibodyJoint::new(car_id, build_suspension_joint(mount.anchor));
+        let suspension_id = spawn_suspension(cmd, mount.anchor, car_transform, joint_suspension);
+        let joint_wheel = MultibodyJoint::new(suspension_id, build_wheel_joint(mount.left));
         let wheel_id = spawn_wheel(
             cmd,
             #[cfg(feature = "graphics")]
             wheel_scene,
             &wheel_spec,
             &mount,
-            transform,
-            joint,
+            car_transform,
+            joint_wheel,
         );
         wheel_id
     }));
+    dbg!(&wheels);
     cmd.entity(car_id).insert(wheels);
     if player {
         cmd.entity(car_id).insert(Player);

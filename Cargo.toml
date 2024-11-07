@@ -41,7 +41,7 @@ bevy_garage_car = { path = "./car", default-features = false }
 bevy_garage_light = { path = "./light" }
 # bevy_garage_nn = { path = "./nn" }
 bevy_garage_track = { path = "./track" }
-bevy_rapier3d = { version = "0.27", features = [
+bevy_rapier3d = { version = "0.27", git="https://github.com/Vrixyz/bevy_rapier", branch="rapier-0.22", features = [
     "serde-serialize",
     "dim3",
 ], default-features = false }

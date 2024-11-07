@@ -54,7 +54,7 @@ impl TrackConfig {
                 let a: Vec3 = segment.a.into();
                 let dir: Vec3 = segment.direction().unwrap().into();
                 let mut pos: Vec3 = a + dir * (shift - seg_meters);
-                pos.y = 0.47;
+                pos.y = 0.57;
 
                 return (pos, Quat::from_rotation_arc(Vec3::Z, dir));
             }
